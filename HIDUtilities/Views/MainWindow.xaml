@@ -13,10 +13,24 @@
     </Window.DataContext>
 
     <Window.Resources>
+        <vm:MainWindowViewModel x:Key="viewModel" />
+
         <ContextMenu x:Key="contextmenu">
-            <MenuItem Header="設定" />
+            <MenuItem Header="設定">
+                <i:Interaction.Triggers>
+                    <i:EventTrigger EventName="Click">
+                        <l:LivetCallMethodAction MethodTarget="{Binding Source={StaticResource viewModel}}" MethodName="ShowWindow" />
+                    </i:EventTrigger>
+                </i:Interaction.Triggers>
+            </MenuItem>
             <Separator />
-            <MenuItem Header="終了" />
+            <MenuItem Header="終了">
+                <i:Interaction.Triggers>
+                    <i:EventTrigger EventName="Click">
+                        <l:LivetCallMethodAction MethodTarget="{Binding Source={StaticResource viewModel}}" MethodName="Exit" />
+                    </i:EventTrigger>
+                </i:Interaction.Triggers>
+            </MenuItem>
         </ContextMenu>
     </Window.Resources>
 

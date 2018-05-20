@@ -63,7 +63,7 @@ namespace HIDUtilities.ViewModels
          */
 
 
-		private MainWindow window;
+		private static MainWindow window;
 		private NotifyIconEx notify;
 
 		#region CanClose変更通知プロパティ
@@ -101,11 +101,16 @@ namespace HIDUtilities.ViewModels
 			window.Hide();
 		}
 
-		private void ShowWindow()
+		public void ShowWindow()
 		{
 			window.Show();
 			window.Activate();
 			window.ShowInTaskbar = true;
+		}
+
+		public void Exit()
+		{
+			App.Current.Shutdown();
 		}
 
 		protected override void Dispose(bool disposing)
