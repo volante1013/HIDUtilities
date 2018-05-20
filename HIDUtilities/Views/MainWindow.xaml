@@ -61,6 +61,11 @@
     </i:Interaction.Triggers>
     
     <Grid>
-        
+        <GroupBox Header="キーの表示" HorizontalAlignment="Left">
+            <StackPanel Orientation="Vertical">
+                <Label Content="入力されたキーの種類を表示" />
+                <TextBox Text="{Binding KeyName, UpdateSourceTrigger=PropertyChanged}" Width="200" IsReadOnly="True"/>
+            </StackPanel>
+        </GroupBox>
     </Grid>
 </Window>

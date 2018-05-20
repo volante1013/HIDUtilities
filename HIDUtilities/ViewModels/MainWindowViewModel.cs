@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.ComponentModel;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 using Livet;
 using Livet.Commands;
@@ -14,7 +15,6 @@ using Livet.Messaging.Windows;
 
 using HIDUtilities.Models;
 using HIDUtilities.Views;
-
 
 namespace HIDUtilities.ViewModels
 {
@@ -82,9 +82,26 @@ namespace HIDUtilities.ViewModels
 		}
 		#endregion
 
+
+		#region KeyName変更通知プロパティ
+		private string _KeyName;
+
+		public string KeyName
+		{
+			get { return _KeyName; }
+			set
+			{ 
+				if (_KeyName == value)
+					return;
+				_KeyName = value;
+				RaisePropertyChanged();
+			}
+		}
+		#endregion
+
+
 		public void Initialize()
 		{
-			CanClose = false;
 			window = App.Current.MainWindow as MainWindow;
 
 			var iconPath = new Uri("pack://application:,,,/Resources/HIDUtilitiesIcon.ico", UriKind.RelativeOrAbsolute);
@@ -93,6 +110,32 @@ namespace HIDUtilities.ViewModels
 			notify.DoubleClick += (_, __) => ShowWindow();
 
 			window.Hide();
+
+			setupKeyHook();
+		}
+
+		private void setupKeyHook()
+		{
+			// 押されたキーの種類を表示
+			KeyHook.hookEvent += (inputKey) => KeyName = KeyInterop.KeyFromVirtualKey(inputKey.key).ToString();
+
+			// 特定のキーに応じて特定の操作を実行
+			// TODO: アプリ側から変更できるようにする
+			KeyHook.hookEvent += (inputKey) =>
+			{
+				var key = KeyInterop.KeyFromVirtualKey(inputKey.key);
+				if(key == Key.Capital)
+				{
+					KeyHook.Cancel();
+				}
+				else if(key == Key.Insert)
+				{
+					KeyHook.Cancel();
+				}
+			};
+
+			// キーフック開始
+			KeyHook.Start();
 		}
 
 		public void CloseCanceledCallback()
