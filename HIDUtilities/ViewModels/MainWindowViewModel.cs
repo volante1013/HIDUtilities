@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.ComponentModel;
+using System.Windows.Controls;
 
 using Livet;
 using Livet.Commands;
@@ -12,6 +13,8 @@ using Livet.EventListeners;
 using Livet.Messaging.Windows;
 
 using HIDUtilities.Models;
+using HIDUtilities.Views;
+
 
 namespace HIDUtilities.ViewModels
 {
@@ -59,8 +62,57 @@ namespace HIDUtilities.ViewModels
          * 自動的にUIDispatcher上での通知に変換されます。変更通知に際してUIDispatcherを操作する必要はありません。
          */
 
+
+		private MainWindow window;
+		private NotifyIconEx notify;
+
+		#region CanClose変更通知プロパティ
+		private bool _CanClose;
+
+		public bool CanClose
+		{
+			get { return _CanClose; }
+			set
+			{ 
+				if (_CanClose == value)	return;
+
+				_CanClose = value;
+				RaisePropertyChanged();
+			}
+		}
+		#endregion
+
 		public void Initialize()
 		{
+			CanClose = false;
+			window = App.Current.MainWindow as MainWindow;
+
+			var iconPath = new Uri("pack://application:,,,/Resources/HIDUtilitiesIcon.ico", UriKind.RelativeOrAbsolute);
+			var menu = window.FindResource("contextmenu") as ContextMenu;
+			notify = new NotifyIconEx(iconPath, "HID Utilities", menu);
+			notify.DoubleClick += (_, __) => ShowWindow();
+
+			window.Hide();
+		}
+
+		public void CloseCanceledCallback()
+		{
+			CanClose = false;
+			window.Hide();
+		}
+
+		private void ShowWindow()
+		{
+			window.Show();
+			window.Activate();
+			window.ShowInTaskbar = true;
+		}
+
+		protected override void Dispose(bool disposing)
+		{
+			base.Dispose(disposing);
+
+			notify.Dispose();
 		}
 	}
 }

@@ -11,6 +11,20 @@
     <Window.DataContext>
         <vm:MainWindowViewModel/>
     </Window.DataContext>
+
+    <Window.Resources>
+        <ContextMenu x:Key="contextmenu">
+            <MenuItem Header="設定" />
+            <Separator />
+            <MenuItem Header="終了" />
+        </ContextMenu>
+    </Window.Resources>
+
+    <i:Interaction.Behaviors>
+        <l:WindowCloseCancelBehavior CanClose="{Binding CanClose}"
+                                     CloseCanceledCallbackMethodTarget="{Binding}"
+                                     CloseCanceledCallbackMethodName="CloseCanceledCallback"/>
+    </i:Interaction.Behaviors>
     
     <i:Interaction.Triggers>
     
