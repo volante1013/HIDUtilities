@@ -62,7 +62,6 @@ namespace HIDUtilities.ViewModels
          * 自動的にUIDispatcher上での通知に変換されます。変更通知に際してUIDispatcherを操作する必要はありません。
          */
 
-
 		private static MainWindow window;
 		private NotifyIconEx notify;
 
@@ -91,8 +90,8 @@ namespace HIDUtilities.ViewModels
 			get { return _KeyName; }
 			set
 			{ 
-				if (_KeyName == value)
-					return;
+				if (_KeyName == value)	return;
+
 				_KeyName = value;
 				RaisePropertyChanged();
 			}
@@ -102,15 +101,19 @@ namespace HIDUtilities.ViewModels
 
 		public void Initialize()
 		{
+			// MainWindowのインスタンス取得
 			window = App.Current.MainWindow as MainWindow;
 
+			// NotifyIconExのインスタンス生成
 			var iconPath = new Uri("pack://application:,,,/Resources/HIDUtilitiesIcon.ico", UriKind.RelativeOrAbsolute);
 			var menu = window.FindResource("contextmenu") as ContextMenu;
 			notify = new NotifyIconEx(iconPath, "HID Utilities", menu);
 			notify.DoubleClick += (_, __) => ShowWindow();
 
+			// ウィンドウを非表示に
 			window.Hide();
 
+			// キーフックの設定
 			setupKeyHook();
 		}
 
@@ -118,6 +121,9 @@ namespace HIDUtilities.ViewModels
 		{
 			// 押されたキーの種類を表示
 			KeyHook.hookEvent += (inputKey) => KeyName = KeyInterop.KeyFromVirtualKey(inputKey.key).ToString();
+
+			// かっこの補完
+			KeyHook.hookEvent += AutoCompleteBrackets;
 
 			// 特定のキーに応じて特定の操作を実行
 			// TODO: アプリ側から変更できるようにする
@@ -138,12 +144,28 @@ namespace HIDUtilities.ViewModels
 			KeyHook.Start();
 		}
 
+		/// <summary>
+		/// かっこの入力を補完する
+		/// </summary>
+		/// <param name="inputKey"></param>
+		private void AutoCompleteBrackets(InputKey inputKey)
+		{
+			
+		}
+
+		/// <summary>
+		/// ウィンドウの閉じるボタンを押されたときに呼ばれる
+		/// ここでウィンドウが閉じるのをキャンセルする
+		/// </summary>
 		public void CloseCanceledCallback()
 		{
 			CanClose = false;
 			window.Hide();
 		}
 
+		/// <summary>
+		/// ウィンドウの表示
+		/// </summary>
 		public void ShowWindow()
 		{
 			window.Show();
@@ -151,11 +173,18 @@ namespace HIDUtilities.ViewModels
 			window.ShowInTaskbar = true;
 		}
 
+		/// <summary>
+		/// アプリの終了
+		/// </summary>
 		public void Exit()
 		{
 			App.Current.Shutdown();
 		}
 
+		/// <summary>
+		/// ウィンドウが閉じたタイミングで呼ばれる
+		/// </summary>
+		/// <param name="disposing"></param>
 		protected override void Dispose(bool disposing)
 		{
 			base.Dispose(disposing);
