@@ -78,6 +78,7 @@
     </Compile>
     <Compile Include="Models\KeyHook.cs" />
     <Compile Include="Models\Model.cs" />
+    <Compile Include="Models\MouseHook.cs" />
     <Compile Include="Models\NotifyIconEx.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>

@@ -61,10 +61,10 @@ namespace HIDUtilities.Models
 
 	public static class KeyHook
 	{
-		private delegate int HookProc(int nCode, IntPtr wParam, IntPtr lParam);
+		private delegate int KeyHookCallback(int nCode, IntPtr wParam, IntPtr lParam);
 
 		[DllImport("user32.dll")]
-		private static extern int SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hInstance, int threadId);
+		private static extern int SetWindowsHookEx(int idHook, KeyHookCallback lpfn, IntPtr hInstance, int threadId);
 
 		[DllImport("user32.dll")]
 		private static extern bool UnhookWindowsHookEx(int idHook);
@@ -85,11 +85,9 @@ namespace HIDUtilities.Models
 
 		private static int hHook = 0;
 
-		/* このイベントにコールバックさせたい関数を入れて、
-		 * アンマネージドコードにイベントを渡してやることで
-		 * GCに回収されることがなくなり、
-		 * CallbackOnCollecterDelegateが発生しない */
-		private static event HookProc hookCallback;
+		//このイベントにコールバックさせたい関数を入れて、アンマネージドコードにイベントを渡してやることで
+		//GCに回収されることがなくなり、CallbackOnCollecterDelegateが発生しない
+		private static event KeyHookCallback hookCallback;
 
 		// キーが押されたイベントを発行するeventとdelegate
 		public delegate void HookHandler(InputKey inputKey);
