@@ -79,6 +79,7 @@
     <Compile Include="Models\KeyHook.cs" />
     <Compile Include="Models\Model.cs" />
     <Compile Include="Models\MouseHook.cs" />
+    <Compile Include="Models\MouseLoop.cs" />
     <Compile Include="Models\NotifyIconEx.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -105,6 +106,7 @@
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <None Include="app.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>

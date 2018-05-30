@@ -14,8 +14,6 @@ namespace HIDUtilities.Models
 	public static class MouseHook
 	{
 		#region NativeMethod
-		private delegate int MouseHookCallback(int nCode, uint msg, ref MSLLHOOKSTRUCT msllhookstruct);
-
 		[DllImport("user32.dll")]
 		private static extern IntPtr SetWindowsHookEx(int idHook, MouseHookCallback lpfn, IntPtr hMod, uint dwThreadId);
 
@@ -25,8 +23,6 @@ namespace HIDUtilities.Models
 
 		[DllImport("user32.dll")]
 		private static extern int CallNextHookEx(IntPtr hhk, int nCode, uint msg, ref MSLLHOOKSTRUCT msllhookstruct);
-
-
 		#endregion
 
 		#region 構造体
@@ -79,13 +75,32 @@ namespace HIDUtilities.Models
 
 		public static StateMouse state;
 
-		public delegate void HookHandler(ref StateMouse state);
+		private static IntPtr hHook = IntPtr.Zero;
 
-		private static IntPtr hHook;
-
-		private static event HookHandler hookEvent;
-
+		private delegate int MouseHookCallback(int nCode, uint msg, ref MSLLHOOKSTRUCT msllhookstruct);
 		private static event MouseHookCallback hookCallback;
+
+		public delegate void HookHandler(StateMouse state);
+		private static HookHandler hookHandler;
+		public static event HookHandler hookEvent
+		{
+			add
+			{
+				// hookHandlerがNullでない かつ valueが含まれているときはaddしない
+				if (hookHandler?.GetInvocationList().Contains(value) ?? false)
+					return;
+
+				hookHandler += value;
+			}
+			remove
+			{
+				// hookHandlerがNull または valueが含まれていないときはremoveしない
+				if (!hookHandler?.GetInvocationList().Contains(value) ?? true)
+					return;
+
+				hookHandler -= value;
+			}
+		}
 
 		private static bool IsCancel = false;
 		public static void Cancel() => IsCancel = true;
@@ -128,7 +143,7 @@ namespace HIDUtilities.Models
 				state.Time = s.time;
 				state.ExtraInfo = s.dwExtraInfo;
 
-				hookEvent?.Invoke(ref state);
+				hookHandler?.Invoke(state);
 
 				if (IsCancel)
 				{

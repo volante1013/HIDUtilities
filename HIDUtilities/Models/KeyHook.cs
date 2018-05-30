@@ -72,7 +72,7 @@ namespace HIDUtilities.Models
 		[DllImport("user32.dll")]
 		private static extern int CallNextHookEx(int idHook, int nCode, IntPtr wParam, IntPtr lParam);
 
-		private const int WH_KEYBORAD_LL = 0x0D;
+		private const int WH_KEYBORAD_LL = 0x0D; // 13
 
 		private struct KeyboardLLHookStruct
 		{
