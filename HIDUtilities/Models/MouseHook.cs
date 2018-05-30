@@ -15,14 +15,14 @@ namespace HIDUtilities.Models
 	{
 		#region NativeMethod
 		[DllImport("user32.dll")]
-		private static extern IntPtr SetWindowsHookEx(int idHook, MouseHookCallback lpfn, IntPtr hMod, uint dwThreadId);
+		private static extern IntPtr SetWindowsHookEx(int idHook, MouseHookCallback lpfn, IntPtr hInstance, uint dwThreadId);
 
 		[DllImport("user32.dll")]
 		[return: MarshalAs(UnmanagedType.Bool)]
-		private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+		private static extern bool UnhookWindowsHookEx(IntPtr handle);
 
 		[DllImport("user32.dll")]
-		private static extern int CallNextHookEx(IntPtr hhk, int nCode, uint msg, ref MSLLHOOKSTRUCT msllhookstruct);
+		private static extern IntPtr CallNextHookEx(IntPtr handle, int nCode, uint msg, ref MouseLLHookStruct msllhookstruct);
 		#endregion
 
 		#region 構造体
@@ -45,7 +45,7 @@ namespace HIDUtilities.Models
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		private struct MSLLHOOKSTRUCT
+		private struct MouseLLHookStruct
 		{
 			public POINT pt;
 			public uint mouseData;
@@ -77,7 +77,7 @@ namespace HIDUtilities.Models
 
 		private static IntPtr hHook = IntPtr.Zero;
 
-		private delegate int MouseHookCallback(int nCode, uint msg, ref MSLLHOOKSTRUCT msllhookstruct);
+		private delegate IntPtr MouseHookCallback(int nCode, uint msg, ref MouseLLHookStruct msllhookstruct);
 		private static event MouseHookCallback hookCallback;
 
 		public delegate void HookHandler(StateMouse state);
@@ -131,9 +131,9 @@ namespace HIDUtilities.Models
 			}
 		}
 
-		private static int MouseHookProc(int nCode, uint msg, ref MSLLHOOKSTRUCT s)
+		private static IntPtr MouseHookProc(int nCode, uint msg, ref MouseLLHookStruct s)
 		{
-			if(nCode > 0)
+			if(nCode >= 0)
 			{
 				state.stroke = GetStroke(msg, ref s);
 				state.X = s.pt.x;
@@ -148,14 +148,14 @@ namespace HIDUtilities.Models
 				if (IsCancel)
 				{
 					IsCancel = false;
-					return 1;
+					return (IntPtr)1;
 				}
 			}
 
 			return CallNextHookEx(hHook, nCode, msg, ref s);
 		}
 
-		private static Stroke GetStroke(uint msg, ref MSLLHOOKSTRUCT s)
+		private static Stroke GetStroke(uint msg, ref MouseLLHookStruct s)
 		{
 			switch (msg)
 			{

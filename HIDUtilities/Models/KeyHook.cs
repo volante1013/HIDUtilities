@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace HIDUtilities.Models
 {
@@ -59,85 +60,158 @@ namespace HIDUtilities.Models
 		public override int GetHashCode() => this.key ^ this.input.GetHashCode();
 	}
 
+	/*
+	 参照 ： https://qiita.com/exliko/items/3135e4413a6da067b35d
+	 */
 	public static class KeyHook
 	{
-		private delegate int KeyHookCallback(int nCode, IntPtr wParam, IntPtr lParam);
+
+		#region NativeMethod
+		[DllImport("user32.dll")]
+		private static extern IntPtr SetWindowsHookEx(int idHook, KeyHookCallback lpfn, IntPtr hInstance, int threadId);
 
 		[DllImport("user32.dll")]
-		private static extern int SetWindowsHookEx(int idHook, KeyHookCallback lpfn, IntPtr hInstance, int threadId);
+		[return: MarshalAs(UnmanagedType.Bool)]
+		private static extern bool UnhookWindowsHookEx(IntPtr handle);
 
 		[DllImport("user32.dll")]
-		private static extern bool UnhookWindowsHookEx(int idHook);
+		private static extern IntPtr CallNextHookEx(IntPtr handle, int nCode, uint msg, ref KeyLLHookStruct keyboardLLHookStruct);
 
-		[DllImport("user32.dll")]
-		private static extern int CallNextHookEx(int idHook, int nCode, IntPtr wParam, IntPtr lParam);
+		#endregion
 
-		private const int WH_KEYBORAD_LL = 0x0D; // 13
-
-		private struct KeyboardLLHookStruct
+		#region 構造体
+		public struct StateKey
 		{
-			public int vkCode;
-			public int scanCode;
-			public int flags;
-			public int time;
+			public Stroke Stroke;
+			public Keys Key;
+			public uint ScanCode;
+			public uint Flags;
+			public uint Time;
+			public IntPtr ExtraInfo;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		private struct KeyLLHookStruct
+		{
+			public uint vkCode;
+			public uint scanCode;
+			public uint flags;
+			public uint time;
 			public IntPtr dwExtraInfo;
 		}
 
-		private static int hHook = 0;
+		#endregion
+		public enum Stroke
+		{
+			KEY_DOWN,
+			KEY_UP,
+			SYSKEY_DOWN,
+			SYSKEY_UP,
+			UNKNOWN
+		}
 
+		private static StateKey state;
+
+		private static IntPtr hHook = IntPtr.Zero;
+
+		private delegate IntPtr KeyHookCallback(int nCode, uint msg, ref KeyLLHookStruct keyboardLLHookStruct);
 		//このイベントにコールバックさせたい関数を入れて、アンマネージドコードにイベントを渡してやることで
 		//GCに回収されることがなくなり、CallbackOnCollecterDelegateが発生しない
 		private static event KeyHookCallback hookCallback;
 
 		// キーが押されたイベントを発行するeventとdelegate
 		public delegate void HookHandler(InputKey inputKey);
-		public static event HookHandler hookEvent;
+		private static HookHandler hookHandler;
+		public static event HookHandler hookEvent
+		{
+			add
+			{
+				// hookHandlerがNullでない かつ valueが含まれているときはaddしない
+				if (hookHandler?.GetInvocationList().Contains(value) ?? false)
+					return;
+
+				hookHandler += value;
+			}
+			remove
+			{
+				// hookHandlerがNull または valueが含まれていないときはremoveしない
+				if (!hookHandler?.GetInvocationList().Contains(value) ?? true)
+					return;
+
+				hookHandler -= value;
+			}
+		}
+
 
 		private static bool IsCancel = false;
 		public static void Cancel() => IsCancel = true;
+
+		private const int WH_KEYBORAD_LL = 0x0D; // 13
 
 		public static void Start()
 		{
 			IntPtr handle = Marshal.GetHINSTANCE(typeof(KeyHook).Assembly.GetModules()[0]);
 			hookCallback = KeyHookProc;
 			hHook = SetWindowsHookEx(WH_KEYBORAD_LL, hookCallback, handle, 0);
-			if(hHook == 0)
+			if(hHook == IntPtr.Zero)
 			{
-				throw new Exception("Failed to SetWindowHookEx.");
+				throw new Exception("Failed SetWindowHookEx.");
 			}
 		}
 
 		public static void Stop()
 		{
-			if(hHook != 0)
+			if(hHook != IntPtr.Zero)
 			{
 				bool ret = UnhookWindowsHookEx(hHook);
 				if (!ret)
 				{
-					throw new Exception("Failed to UnhookWindowsHookEx");
+					throw new Exception("Failed UnhookWindowsHookEx");
 				}
-
-				hHook = 0;
+				hHook = IntPtr.Zero;
 			}
 		}
 
-		private static int KeyHookProc(int nCode, IntPtr wParam, IntPtr lParam)
+		private static IntPtr KeyHookProc(int nCode, uint msg, ref KeyLLHookStruct k)
 		{
-			var MyHookStruct = (KeyboardLLHookStruct)Marshal.PtrToStructure(lParam, typeof(KeyboardLLHookStruct));
-			if(nCode == 0)
+			if(nCode >= 0)
 			{
-				var inputKey = new InputKey(MyHookStruct.vkCode, (InputKey.InputType)wParam);
+				var inputKey = new InputKey((int)k.vkCode, (InputKey.InputType)GetStroke(msg));
 
-				hookEvent?.Invoke(inputKey);
+				state.Stroke = GetStroke(msg);
+				state.Key = (Keys)k.vkCode;
+				state.ScanCode = k.scanCode;
+				state.Flags = k.flags;
+				state.Time = k.time;
+				state.ExtraInfo = k.dwExtraInfo;
+
+				hookHandler?.Invoke(inputKey);
 
 				if (IsCancel)
 				{
 					IsCancel = false;
-					return 1;
+					return (IntPtr)1;
 				}
 			}
 
-			return CallNextHookEx(hHook, nCode, wParam, lParam);
+			return CallNextHookEx(hHook, nCode, msg, ref k);
+		}
+
+		private static Stroke GetStroke(uint msg)
+		{
+			switch (msg)
+			{
+				case 0x0100: // WM_KEYDOWN
+					return Stroke.KEY_DOWN;
+				case 0x0101: // WM_KEYUP
+					return Stroke.KEY_UP;
+				case 0x0104: // WM_SYSKEYDOWN
+					return Stroke.SYSKEY_DOWN;
+				case 0x0105: // WM_SYSKEYUP
+					return Stroke.SYSKEY_UP;
+				default:
+					return Stroke.UNKNOWN;
+			}
 		}
 	}
 }
