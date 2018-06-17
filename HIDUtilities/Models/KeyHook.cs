@@ -120,7 +120,7 @@ namespace HIDUtilities.Models
 		private static event KeyHookCallback hookCallback;
 
 		// キーが押されたイベントを発行するeventとdelegate
-		public delegate void HookHandler(InputKey inputKey);
+		public delegate void HookHandler(in StateKey state/*InputKey inputKey*/);
 		private static HookHandler hookHandler;
 		public static event HookHandler hookEvent
 		{
@@ -176,7 +176,7 @@ namespace HIDUtilities.Models
 		{
 			if(nCode >= 0)
 			{
-				var inputKey = new InputKey((int)k.vkCode, (InputKey.InputType)GetStroke(msg));
+				//var inputKey = new InputKey((int)k.vkCode, (InputKey.InputType)GetStroke(msg));
 
 				state.Stroke = GetStroke(msg);
 				state.Key = (Keys)k.vkCode;
@@ -185,7 +185,7 @@ namespace HIDUtilities.Models
 				state.Time = k.time;
 				state.ExtraInfo = k.dwExtraInfo;
 
-				hookHandler?.Invoke(inputKey);
+				hookHandler?.Invoke(in state);
 
 				if (IsCancel)
 				{

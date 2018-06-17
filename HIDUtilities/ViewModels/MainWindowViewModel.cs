@@ -15,6 +15,7 @@ using Livet.Messaging.Windows;
 
 using HIDUtilities.Models;
 using HIDUtilities.Views;
+using System.Windows.Forms;
 
 namespace HIDUtilities.ViewModels
 {
@@ -62,9 +63,6 @@ namespace HIDUtilities.ViewModels
          * 自動的にUIDispatcher上での通知に変換されます。変更通知に際してUIDispatcherを操作する必要はありません。
          */
 
-		private static MainWindow window;
-		private NotifyIconEx notify;
-
 		#region CanClose変更通知プロパティ
 		private bool _CanClose;
 
@@ -98,6 +96,20 @@ namespace HIDUtilities.ViewModels
 		}
 		#endregion
 
+		private static MainWindow window;
+		private NotifyIconEx notify;
+
+		private uint keyDown = 0;
+		private uint keyTrigger = 0;
+		private uint keyRelease = 0;
+
+		private bool isKeyManageCanceled = false;
+
+		private bool IsDown(Keys key)	 => (keyDown & (1 << (int)key)) != 0;
+		private bool IsTrigger(Keys key) => (keyTrigger & (1 << (int)key)) != 0;
+		private bool IsRelease(Keys key) => (keyRelease & (1 << (int)key)) != 0;
+
+		private static readonly IReadOnlyList<Keys> bracketskeys = new List<Keys> { Keys.LShiftKey, Keys.RShiftKey, Keys.D8, Keys.D9 };
 
 		public void Initialize()
 		{
@@ -106,7 +118,7 @@ namespace HIDUtilities.ViewModels
 
 			// NotifyIconExのインスタンス生成
 			var iconPath = new Uri("pack://application:,,,/Resources/HIDUtilitiesIcon.ico", UriKind.RelativeOrAbsolute);
-			var menu = window.FindResource("contextmenu") as ContextMenu;
+			var menu = window.FindResource("contextmenu") as System.Windows.Controls.ContextMenu;
 			notify = new NotifyIconEx(iconPath, "HID Utilities", menu);
 			notify.DoubleClick += (_, __) => ShowWindow();
 
@@ -115,42 +127,6 @@ namespace HIDUtilities.ViewModels
 
 			// キーフックの設定
 			setupKeyHook();
-		}
-
-		private void setupKeyHook()
-		{
-			// 押されたキーの種類を表示
-			KeyHook.hookEvent += (inputKey) => KeyName = KeyInterop.KeyFromVirtualKey(inputKey.key).ToString();
-
-			// かっこの補完
-			KeyHook.hookEvent += AutoCompleteBrackets;
-
-			// 特定のキーに応じて特定の操作を実行
-			// TODO: アプリ側から変更できるようにする
-			KeyHook.hookEvent += (inputKey) =>
-			{
-				var key = KeyInterop.KeyFromVirtualKey(inputKey.key);
-				if(key == Key.Capital)
-				{
-					KeyHook.Cancel();
-				}
-				else if(key == Key.Insert)
-				{
-					KeyHook.Cancel();
-				}
-			};
-
-			// キーフック開始
-			KeyHook.Start();
-		}
-
-		/// <summary>
-		/// かっこの入力を補完する
-		/// </summary>
-		/// <param name="inputKey"></param>
-		private void AutoCompleteBrackets(InputKey inputKey)
-		{
-			
 		}
 
 		/// <summary>
@@ -190,6 +166,73 @@ namespace HIDUtilities.ViewModels
 			base.Dispose(disposing);
 
 			notify.Dispose();
+		}
+
+		private void setupKeyHook()
+		{
+			KeyHook.hookEvent += ManageKeyEvent;
+
+			// キーフック開始
+			KeyHook.Start();
+		}
+
+		/// <summary>
+		/// 入力されたキーの状態を管理する
+		/// </summary>
+		/// <param name="state">入力されたキー情報</param>
+		private void ManageKeyEvent(in KeyHook.StateKey state)
+		{
+			if (isKeyManageCanceled)
+			{
+				return;
+			}
+
+			// 入力されたキーの状態を管理
+			uint oldKeyDown = keyDown;
+			switch (state.Stroke)
+			{
+				case KeyHook.Stroke.KEY_DOWN:
+				case KeyHook.Stroke.SYSKEY_DOWN:
+					keyDown |= (uint)(1 << (int)state.Key);
+					break;
+
+				case KeyHook.Stroke.KEY_UP:
+				case KeyHook.Stroke.SYSKEY_UP:
+					keyDown ^= (uint)(1 << (int)state.Key);
+					break;
+
+				case KeyHook.Stroke.UNKNOWN:
+				default:
+					return;
+			}
+			keyTrigger = keyDown & ~oldKeyDown;
+			keyRelease = ~keyDown & oldKeyDown;
+
+			// 押されたキーの種類を表示
+			KeyName = state.Key.ToString();
+
+			// かっこの補完
+			AutoCompleteBrackets();
+
+			// 特定のキーに応じて特定の操作を実行
+			// TODO: アプリ側から変更できるようにする
+			if (state.Key == Keys.Capital)
+			{
+				KeyHook.Cancel();
+			}
+			else if (state.Key == Keys.Insert)
+			{
+				KeyHook.Cancel();
+			}
+		}
+
+		/// <summary>
+		/// かっこの入力を補完する
+		/// </summary>
+		/// <param name="inputKey"></param>
+		private void AutoCompleteBrackets()
+		{
+			
 		}
 	}
 }
